@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusFlow — Personal Focus & Burnout Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f0fdf4', 100: '#dcfce7', 500: '#22c55e', 600: '#16a34a', 700: '#15803d' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200 antialiased">
+
+    <header class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <span class="text-2xl">🌱</span>
+                <span class="font-bold text-xl tracking-tight bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">FocusFlow</span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button id="themeToggle" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-700 transition">
+                    <span id="themeIcon">☀️</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <div class="md:col-span-2 space-y-6">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden">
+                <div id="sessionIndicator" class="absolute top-0 left-0 right-0 h-1 bg-slate-200 dark:bg-slate-700 transition-all duration-300"></div>
+                
+                <span id="statusBadge" class="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 mb-4">Idle</span>
+                
+                <div id="timerDisplay" class="text-6xl md:text-7xl font-mono font-bold tracking-tight my-4 text-slate-800 dark:text-white">
+                    00:00:00
+                </div>
+
+                <div id="timerConfig" class="max-w-xs mx-auto mb-6">
+                    <label class="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Select Session Type</label>
+                    <select id="sessionType" class="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700 p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="Study">📚 Study</option>
+                        <option value="Deep Work">🧠 Deep Work</option>
+                        <option value="Reading">📖 Reading</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-center space-x-4">
+                    <button id="startBtn" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm transition transform active:scale-95">
+                        Start Session
+                    </button>
+                    <button id="stopBtn" class="hidden px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-medium rounded-xl shadow-sm transition transform active:scale-95">
+                        Stop & Save
+                    </button>
+                </div>
+            </div>
+
+            <div id="energyModal" class="hidden bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-amber-950/20 rounded-2xl p-6 border border-amber-100 dark:border-amber-900/50">
+                <h3 class="text-lg font-bold text-amber-900 dark:text-amber-400 flex items-center gap-2">
+                    ⚡ Session Complete! Reflect on your Energy
+                </h3>
+                <p class="text-sm text-amber-700 dark:text-slate-300 mt-1">How is your mental battery right now? (1 = Completely Burned Out, 5 = Fully Energized)</p>
+                
+                <div class="flex justify-between max-w-sm mx-auto my-6">
+                    <button onclick="submitEnergy(1)" class="w-12 h-12 rounded-full bg-white dark:bg-slate-700 border border-amber-200 dark:border-slate-600 hover:bg-rose-500 hover:text-white transition font-bold shadow-sm">1</button>
+                    <button onclick="submitEnergy(2)" class="w-12 h-12 rounded-full bg-white dark:bg-slate-700 border border-amber-200 dark:border-slate-600 hover:bg-orange-500 hover:text-white transition font-bold shadow-sm">2</button>
+                    <button onclick="submitEnergy(3)" class="w-12 h-12 rounded-full bg-white dark:bg-slate-700 border border-amber-200 dark:border-slate-600 hover:bg-amber-500 hover:text-white transition font-bold shadow-sm">3</button>
+                    <button onclick="submitEnergy(4)" class="w-12 h-12 rounded-full bg-white dark:bg-slate-700 border border-amber-200 dark:border-slate-600 hover:bg-yellow-500 hover:text-white transition font-bold shadow-sm">4</button>
+                    <button onclick="submitEnergy(5)" class="w-12 h-12 rounded-full bg-white dark:bg-slate-700 border border-amber-200 dark:border-slate-600 hover:bg-emerald-500 hover:text-white transition font-bold shadow-sm">5</button>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800">
+                <h3 class="text-lg font-bold mb-4">Energy Flow Summary</h3>
+                <div id="chartContainer" class="h-32 flex items-end gap-2 pt-4 border-b border-slate-200 dark:border-slate-700">
+                    <p class="text-sm text-slate-400 mx-auto pb-4">Log sessions to visualize your energy profile over time.</p>
+                </div>
+                <div class="flex justify-between items-center text-xs text-slate-400 mt-2">
+                    <span>Older Sessions</span>
+                    <span>Recent Sessions</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-lg">Today's Metrics</h3>
+                    <div class="flex items-center gap-1 bg-orange-50 dark:bg-orange-950/40 text-orange-600 px-2.5 py-1 rounded-full text-xs font-bold">
+                        🔥 <span id="streakDisplay">0</span> day streak
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <span class="block text-2xl font-bold text-emerald-500" id="statTime">0m</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Total Time</span>
+                    </div>
+                    <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <span class="block text-2xl font-bold text-blue-500" id="statCount">0</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Sessions</span>
+                    </div>
+                    <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <span class="block text-2xl font-bold text-amber-500" id="statEnergy">-</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Avg Energy</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800">
+                <h3 class="font-bold text-lg mb-3">Recent Logs</h3>
+                <div id="historyLogs" class="space-y-2 max-h-60 overflow-y-auto pr-1 text-sm">
+                    <p class="text-slate-400 text-center py-4">No sessions tracked today yet.</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 space-y-3 text-xs">
+                <h4 class="font-bold text-slate-400 uppercase tracking-wider">System & Maintenance</h4>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="exportData()" class="p-2 text-center bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 font-medium">📥 Export Data</button>
+                    <label class="p-2 text-center bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 font-medium cursor-pointer block">
+                        📤 Import Backup
+                        <input type="file" id="importFile" class="hidden" onchange="importData(event)">
+                    </label>
+                </div>
+                <button onclick="resetData()" class="w-full p-2 text-center bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 rounded-lg hover:bg-rose-100 font-medium">
+                    ⚠️ Reset All Data
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // State State Variables
+        let state = {
+            logs: [],
+            streak: 0,
+            lastActiveDate: ""
+        };
+
+        let timerInterval = null;
+        let startTime = null;
+        let currentDurationSeconds = 0;
+        let activeSessionType = "";
+
+        // DOM elements
+        const timerDisplay = document.getElementById('timerDisplay');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const sessionIndicator = document.getElementById('sessionIndicator');
+        const timerConfig = document.getElementById('timerConfig');
+        const energyModal = document.getElementById('energyModal');
+
+        // Initial setup
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            loadState();
+            checkAndResetDailyMetrics();
+            updateDashboard();
+        });
+
+        // Theme management (Dark Mode)
+        function initTheme() {
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').innerText = "🌙";
+            } else {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').innerText = "☀️";
+            }
+            
+            document.getElementById('themeToggle').addEventListener('click', () => {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                    document.getElementById('themeIcon').innerText = "🌙";
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                    document.getElementById('themeIcon').innerText = "☀️";
+                }
+            });
+        }
+
+        // Timer Operations
+        function startTimer() {
+            activeSessionType = document.getElementById('sessionType').value;
+            startTime = Date.now();
+            currentDurationSeconds = 0;
+            
+            // Toggle Visibility & States
+            startBtn.classList.add('hidden');
+            stopBtn.classList.remove('hidden');
+            timerConfig.classList.add('opacity-40', 'pointer-events-none');
+            energyModal.classList.add('hidden');
+            
+            statusBadge.innerText = `Focusing: ${activeSessionType}`;
+            statusBadge.className = "inline-block px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 mb-4";
+            sessionIndicator.className = "absolute top-0 left-0 right-0 h-1 bg-emerald-500 animate-pulse";
+
+            timerInterval = setInterval(() => {
+                currentDurationSeconds = Math.floor((Date.now() - startTime) / 1000);
+                timerDisplay.innerText = formatTime(currentDurationSeconds);
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            
+            // Reveal energy logging block
+            energyModal.classList.remove('hidden');
+            
+            // Revert state variables
+            startBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+            timerConfig.classList.remove('opacity-40', 'pointer-events-none');
+            
+            statusBadge.innerText = "Reflecting...";
+            statusBadge.className = "inline-block px-3 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 mb-4";
+            sessionIndicator.className = "absolute top-0 left-0 right-0 h-1 bg-amber-500";
+        }
+
+        function submitEnergy(rating) {
+            const todayStr = new Date().toLocaleDateString();
+            
+            const newSession = {
+                id: Date.now(),
+                date: todayStr,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                type: activeSessionType,
+                duration: currentDurationSeconds,
+                energy: rating
+            };
+
+            state.logs.push(newSession);
+            updateStreak();
+            saveState();
+            
+            // Reset UI state
+            energyModal.classList.add('hidden');
+            timerDisplay.innerText = "00:00:00";
+            statusBadge.innerText = "Idle";
+            statusBadge.className = "inline-block px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 mb-4";
+            sessionIndicator.className = "absolute top-0 left-0 right-0 h-1 bg-slate-200 dark:bg-slate-700";
+            
+            updateDashboard();
+        }
+
+        // Helper time string formatter
+        function formatTime(totalSeconds) {
+            const hrs = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+            const mins = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+            const secs = String(totalSeconds % 60).padStart(2, '0');
+            return `${hrs}:${mins}:${secs}`;
+        }
+
+        // Streak logic calculations
+        function updateStreak() {
+            const todayStr = new Date().toLocaleDateString();
+            if (state.lastActiveDate !== todayStr) {
+                const yesterdayStr = new Date(Date.now() - 86400000).toLocaleDateString();
+                if (state.lastActiveDate === yesterdayStr) {
+                    state.streak += 1;
+                } else if (state.lastActiveDate === "") {
+                    state.streak = 1;
+                }
+                state.lastActiveDate = todayStr;
+            }
+        }
+
+        function checkAndResetDailyMetrics() {
+            // Optional/Strict Feature logic: Reset or clean outdated dynamic dashboard visual data structures
+            const todayStr = new Date().toLocaleDateString();
+            const yesterdayStr = new Date(Date.now() - 86400000).toLocaleDateString();
+            
+            if(state.lastActiveDate !== todayStr && state.lastActiveDate !== yesterdayStr && state.lastActiveDate !== "") {
+                state.streak = 0; // Streak broken if skipped a whole day
+                saveState();
+            }
+        }
+
+        // UI Refresh Dashboard
+        function updateDashboard() {
+            const todayStr = new Date().toLocaleDateString();
+            const todaysLogs = state.logs.filter(log => log.date === todayStr);
+
+            // 1. Calculations
+            let totalSeconds = 0;
+            let totalEnergy = 0;
+            todaysLogs.forEach(log => {
+                totalSeconds += log.duration;
+                totalEnergy += log.energy;
+            });
+
+            const avgEnergy = todaysLogs.length ? (totalEnergy / todaysLogs.length).toFixed(1) : "-";
+            const totalMinutes = Math.round(totalSeconds / 60);
+
+            // 2. Render Text Stats
+            document.getElementById('statTime').innerText = `${totalMinutes}m`;
+            document.getElementById('statCount').innerText = todaysLogs.length;
+            document.getElementById('statEnergy').innerText = avgEnergy;
+            document.getElementById('streakDisplay').innerText = state.streak;
+
+            // 3. Render Log History
+            const historyContainer = document.getElementById('historyLogs');
+            if(todaysLogs.length === 0) {
+                historyContainer.innerHTML = `<p class="text-slate-400 text-center py-4">No sessions tracked today yet.</p>`;
+            } else {
+                historyContainer.innerHTML = todaysLogs.slice().reverse().map(log => `
+                    <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-700/40 border border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                        <div>
+                            <span class="font-medium">${log.type}</span>
+                            <span class="text-xs block text-slate-400">${log.timestamp} • ${Math.round(log.duration / 60)} min</span>
+                        </div>
+                        <div class="flex items-center gap-1 font-bold text-amber-500">
+                            ⚡<span>${log.energy}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // 4. Render Simple Graphical Analytics Chart (Energy level logs visualization)
+            const chartContainer = document.getElementById('chartContainer');
+            const visibleLogsForChart = state.logs.slice(-8); // Get last 8 tracking entries
+            if(visibleLogsForChart.length === 0) {
+                chartContainer.innerHTML = `<p class="text-sm text-slate-400 mx-auto pb-4">Log sessions to visualize your energy profile over time.</p>`;
+            } else {
+                chartContainer.innerHTML = visibleLogsForChart.map(log => {
+                    const heightPercent = (log.energy / 5) * 100;
+                    let colorClass = "bg-rose-400";
+                    if(log.energy >= 4) colorClass = "bg-emerald-400";
+                    else if(log.energy >= 3) colorClass = "bg-amber-400";
+
+                    return `
+                        <div class="flex-1 flex flex-col items-center group relative h-full justify-end">
+                            <div class="absolute -top-6 hidden group-hover:block bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded shadow whitespace-nowrap z-10">
+                                ${log.type}: ✨${log.energy}
+                            </div>
+                            <div class="${colorClass} w-full rounded-t transition-all duration-500" style="height: ${heightPercent}%"></div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Storage operations
+        function saveState() {
+            localStorage.setItem('focusFlow_state', JSON.stringify(state));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('focusFlow_state');
+            if (saved) {
+                try {
+                    state = JSON.parse(saved);
+                } catch(e) {
+                    console.error("Corrupted local state found. Resetting.");
+                }
+            }
+        }
+
+        function resetData() {
+            if(confirm("Are you sure you want to clear all history metrics and streak configuration data? This action cannot be reversed.")) {
+                state = { logs: [], streak: 0, lastActiveDate: "" };
+                saveState();
+                updateDashboard();
+            }
+        }
+
+        // Data Utility Management (Backups)
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `focusflow_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.logs && Array.isArray(parsed.logs)) {
+                        state = parsed;
+                        saveState();
+                        updateDashboard();
+                        alert("Backup Restored Successfully!");
+                    } else {
+                        alert("Invalid data architecture profile found in JSON template.");
+                    }
+                } catch (err) {
+                    alert("Error parsing backup system architecture file.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Wire Up Interactive Actions
+        startBtn.addEventListener('click', startTimer);
+        stopBtn.addEventListener('click', stopTimer);
+    </script>
+</body>
+</html>
